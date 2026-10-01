@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plantas vs. Zombies: Math Conquest Edition</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Sniglet:wght@800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --pvz-green: #2e7d32;
+      --pvz-yellow: #fbc02d;
+      --pvz-brown: #4e342e;
+      --pvz-dark: #1b120c;
+    }
+
+    body {
+      font-family: 'Sniglet', cursive, sans-serif;
+      background: #090d16;
+      color: #fff;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .font-pvz {
+      font-family: 'Fredoka One', cursive;
+    }
+
+    /* ESCENARIOS Y FONDOS DE LOS MUNDOS */
+    .bg-world-1 { background: repeating-linear-gradient(0deg, #388e3c 0px, #388e3c 70px, #2e7d32 70px, #2e7d32 140px); border-color: #1b5e20; }
+    .bg-world-2 { background: repeating-linear-gradient(0deg, #0288d1 0px, #0288d1 70px, #0277bd 70px, #0277bd 140px); border-color: #01579b; }
+    .bg-world-3 { background: repeating-linear-gradient(0deg, #a73a27 0px, #a73a27 70px, #8d2f1f 70px, #8d2f1f 140px); border-color: #4a150b; }
+    .bg-world-4 { background: repeating-linear-gradient(0deg, #311b92 0px, #311b92 70px, #281578 70px, #281578 140px); border-color: #1a0c54; }
+    .bg-world-5 { background: repeating-linear-gradient(0deg, #d84315 0px, #d84315 70px, #bf360c 70px, #bf360c 140px); border-color: #3e2723; }
+    .bg-world-6 { background: repeating-linear-gradient(0deg, #5d4037 0px, #5d4037 70px, #4e342e 70px, #4e342e 140px); border-color: #212121; }
+    .bg-world-7 { background: repeating-linear-gradient(0deg, #1b5e20 0px, #1b5e20 70px, #0d3b11 70px, #0d3b11 140px); border-color: #002703; }
+    .bg-world-8 { background: repeating-linear-gradient(0deg, #212121 0px, #212121 70px, #111111 70px, #111111 140px); border-color: #b71c1c; }
+
+    /* ANIMACIONES */
+    @keyframes floatDialogue {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+    .animate-float { animation: floatDialogue 3s ease-in-out infinite; }
+
+    @keyframes brainMunch {
+      0% { transform: scale(1) rotate(0deg); }
+      25% { transform: scale(1.2) rotate(-10deg); }
+      50% { transform: scale(0.9) rotate(10deg); }
+      75% { transform: scale(1.1) rotate(-5deg); }
+      100% { transform: scale(0) rotate(0deg); opacity: 0; }
+    }
+    .animate-munch { animation: brainMunch 1.8s forwards; }
+
+    @keyframes laserBeam {
+      0% { width: 0%; opacity: 1; }
+      50% { width: 100%; opacity: 1; }
+      100% { width: 100%; opacity: 0; }
+    }
+    .animate-laser { animation: laserBeam 0.6s forwards; }
+
+    /* PROYECTILES */
+    .pea-projectile {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: radial-gradient(circle at 30% 30%, #aed581, #33691e);
+      border: 2px solid #1b5e20;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #aed581;
+      z-index: 25;
+      display: none;
+    }
+
+    /* BADGE HP */
+    .hp-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(185, 28, 28, 0.9);
+      border: 1px solid #ffffff;
+      color: white;
+      font-size: 0.75rem;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: bold;
+      z-index: 30;
+      white-space: nowrap;
+    }
+
+    /* INPUTS DE FRACCIÓN */
+    .fraction-input {
+      background: #fffde7;
+      border: 3px solid #f57f17;
+      color: #3e2723;
+      border-radius: 8px;
+      text-align: center;
+      font-family: 'Fredoka One', cursive;
+      outline: none;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .fraction-input:focus {
+      border-color: #ffb300;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(251, 192, 45, 0.5);
+    }
+
+    .progress-fill { transition: width 0.4s ease-out; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .shake-err { animation: shake 0.4s ease-in-out; }
+
+    /* FORMATO DE FRACCIÓN VERTICAL */
+    .v-fraction {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      padding: 0 4px;
+    }
+    .v-fraction .num { border-bottom: 2px solid currentColor; width: 100%; text-align: center; padding-bottom: 1px; }
+    .v-fraction .den { text-align: center; padding-top: 1px; }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4">
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <div id="gameWindow" class="relative w-full max-w-4xl bg-[#2a1a15] border-4 sm:border-8 border-[#170e0b] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    
+    <!-- BARRA SUPERIOR DE ESTADO -->
+    <div class="bg-[#1a100c] px-4 py-2 flex flex-wrap items-center justify-between border-b-4 border-[#3a251e] gap-2">
+      <div class="flex items-center space-x-3">
+        <div class="bg-[#332018] px-3 py-1 rounded-xl border-2 border-[#523528] flex items-center space-x-2">
+          <span class="text-xl">❤️</span>
+          <span id="livesDisplay" class="font-pvz text-yellow-400 text-lg">3</span>
+        </div>
+        <div class="bg-[#332018] px-3 py-1 rounded-xl border-2 border-[#523528]">
+          <span class="text-xs text-amber-200 block">NIVEL ACTUAL</span>
+          <span id="worldTitle" class="font-pvz text-green-400 text-sm sm:text-base">Mundo 1: El Jardín</span>
+        </div>
+      </div>
+
+      <!-- BARRA DE PROGRESO -->
+      <div class="flex-1 max-w-xs mx-2 min-w-[140px]">
+        <div class="flex justify-between text-xs font-bold text-amber-200 mb-1">
+          <span>PROGRESO</span>
+          <span id="zombieDefeatedText">0 / 5 Zombis</span>
+        </div>
+        <div class="w-full bg-gray-900 h-4 rounded-full border border-amber-900/50 overflow-hidden p-0.5">
+          <div id="progressBar" class="progress-fill bg-gradient-to-r from-green-500 to-yellow-400 h-full rounded-full w-0"></div>
+        </div>
+      </div>
+
+      <!-- BOTÓN DE MAPAS -->
+      <button onclick="toggleWorldMenu()" class="bg-amber-700 hover:bg-amber-600 border-2 border-amber-500 font-pvz px-3 py-1 rounded-xl text-xs sm:text-sm shadow-md transition-transform active:scale-95">
+        🗺️ Mapas
+      </button>
+    </div>
+
+    <!-- ÁREA DEL CAMPO DE JUEGO -->
+    <div class="relative w-full h-[230px] sm:h-[280px]">
+      
+      <!-- CARRILES DEL CAMPO (3 CARRILES) -->
+      <div id="lawnContainer" class="w-full h-full bg-world-1 border-b-4 flex flex-col relative overflow-hidden transition-all duration-500">
+        
+        <!-- EFECTO DE LLUVIA PARA EL MUNDO 7 -->
+        <div id="rainOverlay" class="hidden absolute inset-0 bg-blue-900/20 z-10 pointer-events-none"></div>
+
+        <!-- CARRIL 0 -->
+        <div id="lane-0" class="relative flex-1 border-b border-white/10 flex items-center px-2">
+          <div id="plantSlot-0" class="w-16 h-16 sm:w-20 sm:h-20 relative flex items-center justify-center z-10"></div>
+          <div id="pea-0" class="pea-projectile"></div>
+          <div id="laser-0" class="absolute left-0 top-1/2 -translate-y-1/2 h-2 bg-red-500 shadow-[0_0_12px_#f00] z-30 opacity-0 pointer-events-none"></div>
+        </div>
+
+        <!-- CARRIL 1 -->
+        <div id="lane-1" class="relative flex-1 border-b border-white/10 flex items-center px-2">
+          <div id="plantSlot-1" class="w-16 h-16 sm:w-20 sm:h-20 relative flex items-center justify-center z-10"></div>
+          <div id="pea-1" class="pea-projectile"></div>
+          <div id="laser-1" class="absolute left-0 top-1/2 -translate-y-1/2 h-2 bg-red-500 shadow-[0_0_12px_#f00] z-30 opacity-0 pointer-events-none"></div>
+        </div>
+
+        <!-- CARRIL 2 -->
+        <div id="lane-2" class="relative flex-1 flex items-center px-2">
+          <div id="plantSlot-2" class="w-16 h-16 sm:w-20 sm:h-20 relative flex items-center justify-center z-10"></div>
+          <div id="pea-2" class="pea-projectile"></div>
+          <div id="laser-2" class="absolute left-0 top-1/2 -translate-y-1/2 h-2 bg-red-500 shadow-[0_0_12px_#f00] z-30 opacity-0 pointer-events-none"></div>
+        </div>
+
+        <!-- BOSS ZOMBOT -->
+        <div id="bossZombot" class="hidden absolute right-2 top-1/2 -translate-y-1/2 w-32 h-44 sm:w-40 sm:h-52 z-20 transition-all duration-300">
+        </div>
+
+      </div>
+
+      <!-- OVERLAY DE DIÁLOGOS DE HISTORIA Y TUTORIAL -->
+      <div id="dialogueOverlay" class="absolute inset-0 bg-black/80 z-40 flex flex-col justify-end p-3 sm:p-4 transition-opacity duration-300">
+        <div class="bg-[#3a251e] border-4 border-[#684336] rounded-2xl p-3 sm:p-4 relative flex flex-col sm:flex-row items-center gap-3 sm:gap-4 shadow-2xl animate-float">
+          
+          <div class="flex-shrink-0 flex items-center justify-center bg-[#211410] border-2 border-[#8c5a49] rounded-xl p-2 w-20 h-20 sm:w-24 sm:h-24 shadow-inner">
+            <div id="dialogueAvatar" class="w-full h-full flex items-center justify-center"></div>
+          </div>
+
+          <div class="flex-1 w-full text-center sm:text-left flex flex-col justify-between">
+            <div>
+              <h3 id="speakerName" class="font-pvz text-yellow-400 text-lg sm:text-xl">Pepe Loco</h3>
+              <div id="dialogueText" class="text-xs sm:text-sm text-amber-100 font-medium leading-snug mt-1 min-h-[50px] flex items-center justify-center sm:justify-start">
+              </div>
+            </div>
+
+            <div class="mt-3 flex justify-end">
+              <button id="nextDialogueBtn" onclick="advanceDialogue()" class="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 border-2 border-green-300 font-pvz px-5 py-1.5 rounded-xl text-sm shadow-lg transform active:scale-95 transition-all">
+                Siguiente ➔
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- GAME OVER OVERLAY -->
+      <div id="gameOverOverlay" class="hidden absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4 text-center">
+        <div id="brainAnimation" class="text-6xl mb-3">🧠💥</div>
+        <h2 class="font-pvz text-2xl sm:text-4xl text-red-500 mb-2 drop-shadow">¡LOS ZOMBIS LLEGARON AL FINAL Y SE COMIERON TU CEREBRO!</h2>
+        <p id="encouragementText" class="text-xs sm:text-sm text-amber-100 max-w-md mb-6 leading-relaxed bg-[#3a251e] p-4 rounded-xl border-2 border-amber-600 shadow-xl">
+        </p>
+        <button onclick="retryLevel()" class="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 border-2 border-green-300 font-pvz px-8 py-3 rounded-2xl text-base sm:text-lg shadow-xl transform active:scale-95 transition-all">
+          🔄 Intentar de nuevo
+        </button>
+      </div>
+
+      <!-- MENÚ DE MUNDOS -->
+      <div id="worldMenuOverlay" class="hidden absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4 overflow-y-auto">
+        <h2 class="font-pvz text-2xl sm:text-3xl text-yellow-400 mb-3 drop-shadow">SELECCIONA MUNDO</h2>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-xl max-h-[70vh] overflow-y-auto p-2">
+          <button id="btnWorld-1" onclick="selectWorld(1)" class="bg-[#3a251e] border-2 border-green-500 p-2.5 rounded-xl flex items-center space-x-3 text-left transition hover:bg-[#4a3027]">
+            <div class="text-2xl sm:text-3xl">🏡</div>
+            <div>
+              <div class="font-pvz text-green-400 text-xs sm:text-sm">Mundo 1: El Jardín</div>
+              <div class="text-[10px] sm:text-[11px] text-amber-200">Suma / Resta Homogénea</div>
+            </div>
+          </button>
+
+          <button id="btnWorld-2" onclick="selectWorld(2)" class="bg-[#211410] border-2 border-gray-600 p-2.5 rounded-xl flex items-center space-x-3 text-left opacity-60 cursor-not-allowed">
+            <div class="text-2xl sm:text-3xl">🏊</div>
+            <div>
+              <div class="font-pvz text-gray-400 text-xs sm:text-sm">Mundo 2: La Piscina</div>
+              <div class="text-[10px] sm:text-[11px] text-gray-500">Múltiplos de Denominador</div>
+            </div>
+          </button>
+
+          <button id="btnWorld-3" onclick="selectWorld(3)" class="bg-[#211410] border-2 border-gray-600 p-2.5 rounded-xl flex items-center space-x-3 text-left opacity-60 cursor-not-allowed">
+            <div class="text-2xl sm:text-3xl">🏠</div>
+            <div>
+              <div class="font-pvz text-gray-400 text-xs sm:text-sm">Mundo 3: El Tejado</div>
+              <div class="text-[10px] sm:text-[11px] text-gray-500">Productos Cruzados</div>
+            </div>
+          </button>
+
+          <button id="btnWorld-4" onclick="selectWorld(4)" class="bg-[#211410] border-2 border-gray-600 p-2.5 rounded-xl flex items-center space-x-3 text-left opacity-60 cursor-not-allowed">
+            <div class="text-2xl sm:text-3xl">🚀</div>
+            <div>
+              <div class="font-pvz text-gray-400 text-xs sm:text-sm">Mundo 4: Espacio Exterior</div>
+              <div class="text-[10px] sm:text-[11px] text-gray-500">Simplificación Máxima</div>
+            </div>
+          </button>
+
+          <button id="btnWorld-5" onclick="selectWorld(5)" class="bg-[#211410] border-2 border-gray-600 p-2.5 rounded-xl flex items-center space-x-3 text-left opacity-60 cursor-not-allowed">
+            <div class="text-2xl sm:text-3xl">🌵</div>
+            <div>
+              <div class="font-pvz text-gray-400 text-xs sm:text-sm">Mundo 5: El Desierto</div>
+              <div class="text-[10px] sm:text-[11px] text-gray-500">Multiplicación de Fracciones</div>
+            </div>
+          </button>
+
+          <button id="btnWorld-6" onclick="selectWorld(6)" class="bg-[#211410] border-2 border-gray-600 p-2.5 rounded-xl flex items-center space-x-3 text-left opacity-60 cursor-not-allowed">
+            <div class="text-2xl sm:text-3xl">🏚️</div>
+            <div>
+              <div class="font-pvz text-gray-400 text-xs sm:text-sm">Mundo 6: Casa de Pepe Loco</div>
+              <div class="text-[10px] sm:text-[11px] text-gray-500">División de Fracciones</div>
+            </div>
+          </button>
+
+          <button id="btnWorld-7" onclick="selectWorld(7)" class="bg-[#211410] border-2 border-gray-600 p-2.5 rounded-xl flex items-center space-x-3 text-left opacity-60 cursor-not-allowed">
+            <div class="text-2xl sm:text-3xl">🌧️</div>
+            <div>
+              <div class="font-pvz text-gray-400 text-xs sm:text-sm">Mundo 7: Jardín Lluvioso</div>
+              <div class="text-[10px] sm:text-[11px] text-gray-500">Fracciones Mixtas / Impropias</div>
+            </div>
+          </button>
+
+          <button id="btnWorld-8" onclick="selectWorld(8)" class="bg-[#211410] border-2 border-gray-600 p-2.5 rounded-xl flex items-center space-x-3 text-left opacity-60 cursor-not-allowed">
+            <div class="text-2xl sm:text-3xl">🤖</div>
+            <div>
+              <div class="font-pvz text-gray-400 text-xs sm:text-sm">Mundo 8: Guarida Zomboss</div>
+              <div class="text-[10px] sm:text-[11px] text-gray-500">Boss Robot (Operaciones Combinadas)</div>
+            </div>
+          </button>
+        </div>
+
+        <button onclick="toggleWorldMenu()" class="mt-4 bg-red-700 hover:bg-red-600 font-pvz px-6 py-1.5 rounded-xl border-2 border-red-400 text-xs sm:text-sm">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+
+    <!-- PANEL DE CONTROL MATEMÁTICO -->
+    <div id="mathPanel" class="bg-[#3a251e] border-t-4 border-[#241612] p-3 sm:p-4 flex flex-col items-center justify-center min-h-[140px]">
+      
+      <div id="problemBox" class="flex items-center justify-center gap-2 sm:gap-4 text-xl sm:text-3xl font-pvz text-yellow-400 mb-3 bg-[#241612] px-4 sm:px-6 py-2 rounded-2xl border-2 border-[#523528] shadow-inner">
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="submitAnswer()" class="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 border-2 border-yellow-200 text-amber-950 font-pvz px-6 sm:px-8 py-2 rounded-2xl text-base sm:text-lg shadow-lg active:scale-95 transition-transform">
+          🌱 ¡DISPARAR!
+        </button>
+      </div>
+
+      <div id="feedbackText" class="h-5 text-xs sm:text-sm font-bold text-center mt-2"></div>
+
+    </div>
+
+  </div>
+
+  <script>
+    let unlockedWorld = 1;
+    let currentWorld = 1;
+    let lives = 3;
+    let zombiesKilled = 0;
+    const TARGET_KILLS = 5;
+
+    let currentTargetRow = 0;
+    let activeZombieHP = 1;
+    let zombiePos = -80;
+    let zombieInterval = null;
+    let bossAttackInterval = null;
+    let isFiring = false;
+
+    let targetNum = 0;
+    let targetDen = 1;
+
+    let dialogueStep = 0;
+    let dialogueSequence = [];
+    let isStoryActive = true;
+
+    const ENCOURAGEMENT_MESSAGES = [
+      "💪 ¡No te rindas, vecino! Cada intento te acerca más a dominar las fracciones. ¡Revisa el denominador y vuelve a intentar!",
+      "🌟 ¡Las matemáticas son como un superpoder! Entre más practicas, más rápido respondes. ¡Vamos por esa revancha!",
+      "🧠 ¡Ajusta tus cálculos! Ni el Dr. Zomboso pudo resolver sus ecuaciones al primer intento. ¡Defiende tu jardín!",
+      "🌱 ¡Tus plantas confían en ti! Repasa las reglas del nivel actual y demuestra tu verdadero talento matemático."
+    ];
+
+    const SVGS = {
+      pepeLoco: `
+        <svg viewBox="0 0 100 100" class="w-full h-full">
+          <path d="M 20 80 Q 50 15 80 80 Z" fill="#d7ccc8" stroke="#4e342e" stroke-width="3"/>
+          <circle cx="50" cy="40" r="22" fill="#ffcc80" stroke="#4e342e" stroke-width="3"/>
+          <rect x="30" y="12" width="40" height="14" fill="#78909c" rx="2" stroke="#37474f" stroke-width="2"/>
+          <rect x="25" y="24" width="50" height="5" fill="#546e7a" rx="1"/>
+          <circle cx="42" cy="38" r="5" fill="#fff" stroke="#000"/><circle cx="43" cy="38" r="2" fill="#000"/>
+          <circle cx="58" cy="38" r="6" fill="#fff" stroke="#000"/><circle cx="57" cy="38" r="2" fill="#000"/>
+          <path d="M 35 52 Q 50 65 65 52" fill="none" stroke="#5d4037" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+      `,
+      zomboss: `
+        <svg viewBox="0 0 100 100" class="w-full h-full">
+          <ellipse cx="50" cy="38" rx="30" ry="26" fill="#b0bec5" stroke="#37474f" stroke-width="3"/>
+          <path d="M 30 25 Q 40 15 50 25 Q 60 15 70 25 Q 80 35 70 45" fill="none" stroke="#78909c" stroke-width="3"/>
+          <circle cx="38" cy="38" r="7" fill="#ffe0b2" stroke="#000"/><circle cx="38" cy="38" r="3" fill="#d32f2f"/>
+          <circle cx="62" cy="38" r="7" fill="#ffe0b2" stroke="#000"/><circle cx="62" cy="38" r="2" fill="#000"/>
+          <path d="M 40 54 L 45 62 L 50 54 L 55 62 L 60 54" fill="#fff" stroke="#37474f" stroke-width="2"/>
+        </svg>
+      `,
+      zombot: `
+        <svg viewBox="0 0 120 160" class="w-full h-full drop-shadow-2xl">
+          <rect x="25" y="110" width="20" height="40" fill="#37474f" stroke="#102027" stroke-width="3"/>
+          <rect x="75" y="110" width="20" height="40" fill="#37474f" stroke="#102027" stroke-width="3"/>
+          <rect x="15" y="50" width="90" height="65" rx="8" fill="#546e7a" stroke="#263238" stroke-width="4"/>
+          <circle cx="60" cy="80" r="16" fill="#b71c1c" stroke="#5f0909" stroke-width="3"/>
+          <rect x="25" y="10" width="70" height="42" rx="6" fill="#78909c" stroke="#37474f" stroke-width="3"/>
+          <circle cx="45" cy="28" r="8" fill="#ff1744" stroke="#8e0000" stroke-width="2"/>
+          <circle cx="75" cy="28" r="8" fill="#ff1744" stroke="#8e0000" stroke-width="2"/>
+          <circle cx="60" cy="20" r="10" fill="#b0bec5" stroke="#37474f"/>
+        </svg>
+      `,
+      plants: [
+        `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 50 90 Q 40 60 50 55" stroke="#2e7d32" stroke-width="8" stroke-linecap="round" fill="none"/><circle cx="45" cy="40" r="20" fill="#7cb342" stroke="#33691e" stroke-width="3"/><path d="M 55 32 Q 75 32 80 40 Q 75 48 55 48 Z" fill="#558b2f" stroke="#1b5e20" stroke-width="2"/><circle cx="40" cy="35" r="4" fill="#fff"/><circle cx="41" cy="35" r="1.5" fill="#000"/></svg>`,
+        `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 50 90 Q 40 60 50 55" stroke="#2e7d32" stroke-width="8" stroke-linecap="round" fill="none"/><circle cx="42" cy="40" r="20" fill="#558b2f" stroke="#1b5e20" stroke-width="3"/><path d="M 52 30 L 78 30 L 78 40 L 52 40 Z" fill="#33691e" stroke="#1b5e20" stroke-width="2"/><path d="M 52 42 L 78 42 L 78 52 L 52 52 Z" fill="#33691e" stroke="#1b5e20" stroke-width="2"/><circle cx="36" cy="34" r="4" fill="#fff"/></svg>`,
+        `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 50 90 Q 40 60 50 55" stroke="#1b5e20" stroke-width="8" stroke-linecap="round" fill="none"/><circle cx="40" cy="40" r="22" fill="#2e7d32" stroke="#0d5316" stroke-width="3"/><rect x="54" y="32" width="28" height="18" fill="#455a64" rx="2" stroke="#263238" stroke-width="2"/><circle cx="35" cy="36" r="4" fill="#fff"/></svg>`,
+        `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 50 90 Q 40 60 50 55" stroke="#006064" stroke-width="8" fill="none"/><circle cx="42" cy="40" r="22" fill="#00bcd4" stroke="#006064" stroke-width="3"/><ellipse cx="68" cy="40" rx="16" ry="10" fill="#80deea" stroke="#00838f" stroke-width="2"/><circle cx="36" cy="34" r="4" fill="#fff"/></svg>`,
+        `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 50 90 Q 40 60 50 55" stroke="#e65100" stroke-width="8" fill="none"/><circle cx="42" cy="40" r="20" fill="#fb8c00" stroke="#ef6c00" stroke-width="3"/><path d="M 55 32 L 80 40 L 55 48 Z" fill="#f57c00" stroke="#e65100" stroke-width="2"/><circle cx="36" cy="34" r="4" fill="#fff"/></svg>`,
+        `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 50 90 Q 40 60 50 55" stroke="#4e342e" stroke-width="8" fill="none"/><circle cx="42" cy="40" r="20" fill="#8d6e63" stroke="#4e342e" stroke-width="3"/><path d="M 52 32 L 78 32 L 78 48 L 52 48 Z" fill="#6d4c41" stroke="#3e2723" stroke-width="2"/><circle cx="36" cy="34" r="4" fill="#fff"/></svg>`,
+        `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 50 90 Q 40 60 50 55" stroke="#f57f17" stroke-width="8" fill="none"/><circle cx="42" cy="40" r="22" fill="#fbc02d" stroke="#f57f17" stroke-width="3"/><polygon points="60,30 80,40 65,42 82,52 55,48" fill="#fff59d" stroke="#f57f17"/><circle cx="36" cy="34" r="4" fill="#fff"/></svg>`,
+        `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M 50 90 Q 40 60 50 55" stroke="#4a148c" stroke-width="8" fill="none"/><circle cx="42" cy="40" r="24" fill="#ab47bc" stroke="#4a148c" stroke-width="3"/><ellipse cx="70" cy="40" rx="18" ry="12" fill="#ea80fc" stroke="#8e24aa" stroke-width="2"/><circle cx="36" cy="34" r="4" fill="#fff"/></svg>`
+      ]
+    };
+
+    const STORY_DATA = {
+      1: {
+        intro: [
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡Hola vecino! Soy Pepe Loco. ¡El Dr. Zomboso intenta invadir tu jardín!" },
+          { speaker: "Dr. Zomboso", avatar: SVGS.zomboss, html: "Muahaha... ¡Nos comeremos tus cerebros a menos que domines las fracciones!" },
+          { 
+            speaker: "Pepe Loco (Tutorial Math 💡)", 
+            avatar: SVGS.pepeLoco, 
+            html: `<div class="bg-[#2a1a15] p-2 rounded border border-amber-500 text-left text-xs w-full">
+                    <p class="font-bold text-yellow-300 mb-1">📖 Lección 1: Suma y Resta Homogénea</p>
+                    <p class="mb-1">Si los denominadores son <b>IGUALES</b>, el denominador se mantiene y sumas o restas los numeradores:</p>
+                    <div class="flex items-center justify-center font-pvz text-yellow-400 gap-1 my-1">
+                      <span class="v-fraction"><span class="num">a</span><span class="den">c</span></span>
+                      <span>±</span>
+                      <span class="v-fraction"><span class="num">b</span><span class="den">c</span></span>
+                      <span>=</span>
+                      <span class="v-fraction"><span class="num">a ± b</span><span class="den">c</span></span>
+                    </div>
+                    <p class="text-green-300 text-center">Ejemplo: <span class="v-fraction"><span class="num">2</span><span class="den">5</span></span> + <span class="v-fraction"><span class="num">1</span><span class="den">5</span></span> = <b><span class="v-fraction"><span class="num">3</span><span class="den">5</span></span></b></p>
+                   </div>` 
+          }
+        ],
+        outro: [
+          { speaker: "Dr. Zomboso", avatar: SVGS.zomboss, html: "¡Arggh! ¿Cómo pudiste sumar tan rápido? ¡Nos veremos en la Piscina!" },
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡Excelente! Los zombis se replegaron a la piscina. ¡Sigámoslos!" }
+        ]
+      },
+      2: {
+        intro: [
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡Llegamos a la Piscina! Los zombis traen conos de protección." },
+          { 
+            speaker: "Pepe Loco (Tutorial Math 💡)", 
+            avatar: SVGS.pepeLoco, 
+            html: `<div class="bg-[#2a1a15] p-2 rounded border border-amber-500 text-left text-xs w-full">
+                    <p class="font-bold text-yellow-300 mb-1">📖 Lección 2: Múltiplos de Denominador</p>
+                    <p class="mb-1">Amplifica la fracción de menor denominador multiplicando arriba y abajo por el mismo número para igualar denominadores:</p>
+                    <div class="flex items-center justify-center font-pvz text-yellow-400 gap-1 my-1">
+                      <span class="v-fraction"><span class="num">1</span><span class="den">2</span></span>
+                      <span>+</span>
+                      <span class="v-fraction"><span class="num">1</span><span class="den">4</span></span>
+                      <span>➔</span>
+                      <span class="v-fraction"><span class="num">2</span><span class="den">4</span></span>
+                      <span>+</span>
+                      <span class="v-fraction"><span class="num">1</span><span class="den">4</span></span>
+                      <span>=</span>
+                      <span class="v-fraction"><span class="num">3</span><span class="den">4</span></span>
+                    </div>
+                   </div>` 
+          }
+        ],
+        outro: [
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡Bien hecho! ¡Ahora huyeron hacia el Tejado!" }
+        ]
+      },
+      3: {
+        intro: [
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡El Tejado! Los denominadores aquí son totalmente distintos." },
+          { 
+            speaker: "Pepe Loco (Tutorial Math 💡)", 
+            avatar: SVGS.pepeLoco, 
+            html: `<div class="bg-[#2a1a15] p-2 rounded border border-amber-500 text-left text-xs w-full">
+                    <p class="font-bold text-yellow-300 mb-1">📖 Lección 3: Productos Cruzados (Carita Feliz)</p>
+                    <p class="mb-1">Multiplica cruzado para hallar el nuevo numerador y multiplica abajo los denominadores:</p>
+                    <div class="flex items-center justify-center font-pvz text-yellow-400 gap-1 my-1">
+                      <span class="v-fraction"><span class="num">a</span><span class="den">b</span></span>
+                      <span>+</span>
+                      <span class="v-fraction"><span class="num">c</span><span class="den">d</span></span>
+                      <span>=</span>
+                      <span class="v-fraction"><span class="num">(a·d) + (b·c)</span><span class="den">b·d</span></span>
+                    </div>
+                   </div>` 
+          }
+        ],
+        outro: [
+          { speaker: "Dr. Zomboso", avatar: SVGS.zomboss, html: "¡Mis cubetas de acero cayeron! ¡Me escaparé al Espacio Exterior!" }
+        ]
+      },
+      4: {
+        intro: [
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡Estamos en la órbita espacial! Aquí requerimos simplificar respuestas." },
+          { 
+            speaker: "Pepe Loco (Tutorial Math 💡)", 
+            avatar: SVGS.pepeLoco, 
+            html: `<div class="bg-[#2a1a15] p-2 rounded border border-amber-500 text-left text-xs w-full">
+                    <p class="font-bold text-yellow-300 mb-1">📖 Lección 4: Simplificación de Fracciones</p>
+                    <p class="mb-1">Divide el numerador y el denominador por su Máximo Común Divisor (MCD):</p>
+                    <div class="flex items-center justify-center font-pvz text-yellow-400 gap-1 my-1">
+                      <span class="v-fraction"><span class="num">4 (÷4)</span><span class="den">8 (÷4)</span></span>
+                      <span>=</span>
+                      <span class="v-fraction"><span class="num">1</span><span class="den">2</span></span>
+                    </div>
+                   </div>` 
+          }
+        ],
+        outro: [
+          { speaker: "Dr. Zomboso", avatar: SVGS.zomboss, html: "¡Nooo! ¡Aterrizaré de emergencia en el Desierto!" }
+        ]
+      },
+      5: {
+        intro: [
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡Bienvenido al Desierto, vecino! El calor incrementa la dificultad con multiplicaciones." },
+          { 
+            speaker: "Pepe Loco (Tutorial Math 💡)", 
+            avatar: SVGS.pepeLoco, 
+            html: `<div class="bg-[#2a1a15] p-2 rounded border border-amber-500 text-left text-xs w-full">
+                    <p class="font-bold text-yellow-300 mb-1">📖 Lección 5: Multiplicación de Fracciones</p>
+                    <p class="mb-1">Multiplica de forma directa: <b>numerador por numerador</b> y <b>denominador por denominador</b>:</p>
+                    <div class="flex items-center justify-center font-pvz text-yellow-400 gap-1 my-1">
+                      <span class="v-fraction"><span class="num">a</span><span class="den">b</span></span>
+                      <span>×</span>
+                      <span class="v-fraction"><span class="num">c</span><span class="den">d</span></span>
+                      <span>=</span>
+                      <span class="v-fraction"><span class="num">a · c</span><span class="den">b · d</span></span>
+                    </div>
+                    <p class="text-green-300 text-center">Ejemplo: <span class="v-fraction"><span class="num">2</span><span class="den">3</span></span> × <span class="v-fraction"><span class="num">4</span><span class="den">5</span></span> = <b><span class="v-fraction"><span class="num">8</span><span class="den">15</span></span></b></p>
+                   </div>` 
+          }
+        ],
+        outro: [
+          { speaker: "Dr. Zomboso", avatar: SVGS.zomboss, html: "¡El calor desértico no los detuvo! ¡Iré a invadir la casa de Pepe Loco!" }
+        ]
+      },
+      6: {
+        intro: [
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡Están atacando mi propia casa! Debemos repelerlos usando divisiones." },
+          { 
+            speaker: "Pepe Loco (Tutorial Math 💡)", 
+            avatar: SVGS.pepeLoco, 
+            html: `<div class="bg-[#2a1a15] p-2 rounded border border-amber-500 text-left text-xs w-full">
+                    <p class="font-bold text-yellow-300 mb-1">📖 Lección 6: División de Fracciones</p>
+                    <p class="mb-1">Multiplica cruzado o invierte la segunda fracción y multiplica directo:</p>
+                    <div class="flex items-center justify-center font-pvz text-yellow-400 gap-1 my-1">
+                      <span class="v-fraction"><span class="num">a</span><span class="den">b</span></span>
+                      <span>÷</span>
+                      <span class="v-fraction"><span class="num">c</span><span class="den">d</span></span>
+                      <span>=</span>
+                      <span class="v-fraction"><span class="num">a · d</span><span class="den">b · c</span></span>
+                    </div>
+                    <p class="text-green-300 text-center">Ejemplo: <span class="v-fraction"><span class="num">1</span><span class="den">3</span></span> ÷ <span class="v-fraction"><span class="num">2</span><span class="den">5</span></span> = <b><span class="v-fraction"><span class="num">5</span><span class="den">6</span></span></b></p>
+                   </div>` 
+          }
+        ],
+        outro: [
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡Salvaste mi casa, vecino! Pero Zomboso se escondió en el jardín lluvioso." }
+        ]
+      },
+      7: {
+        intro: [
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡Una tormenta eléctrica azota el jardín! Aquí enfrentamos números mixtos." },
+          { 
+            speaker: "Pepe Loco (Tutorial Math 💡)", 
+            avatar: SVGS.pepeLoco, 
+            html: `<div class="bg-[#2a1a15] p-2 rounded border border-amber-500 text-left text-xs w-full">
+                    <p class="font-bold text-yellow-300 mb-1">📖 Lección 7: Fracciones Mixtas a Impropias</p>
+                    <p class="mb-1">Multiplica el entero por el denominador y súmale el numerador:</p>
+                    <div class="flex items-center justify-center font-pvz text-yellow-400 gap-1 my-1">
+                      <span>E </span>
+                      <span class="v-fraction"><span class="num">N</span><span class="den">D</span></span>
+                      <span>=</span>
+                      <span class="v-fraction"><span class="num">(E · D) + N</span><span class="den">D</span></span>
+                    </div>
+                    <p class="text-green-300 text-center">Ejemplo: 1 <span class="v-fraction"><span class="num">1</span><span class="den">2</span></span> = <b><span class="v-fraction"><span class="num">3</span><span class="den">2</span></span></b></p>
+                   </div>` 
+          }
+        ],
+        outro: [
+          { speaker: "Dr. Zomboso", avatar: SVGS.zomboss, html: "¡Se acabó el juego! ¡Retírense a mi Base Secreta! ¡Allí usaré el ZOMBOT!" }
+        ]
+      },
+      8: {
+        intro: [
+          { speaker: "Dr. Zomboso", avatar: SVGS.zomboss, html: "¡JAJAJA! ¡Bienvenido a mi Guarida! ¡Desde mi ZOMBOT ROBOT destruiré tus plantas y dominaré el mundo!" },
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡Cuidado, vecino! El Zombot disparará un rayo láser que eliminará plantas. ¡Resuelve rápido las operaciones combinadas!" }
+        ],
+        outro: [
+          { speaker: "Dr. Zomboso", avatar: SVGS.zomboss, html: "¡NOOOOO! ¡Mi Zombot colapsa! El poder del cálculo perfecto ha destruido mis circuitos..." },
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "¡Se acabó, Zomboso! Tu ejército de la ignorancia fue derrotado por el conocimiento matemático." },
+          { speaker: "Dr. Zomboso", avatar: SVGS.zomboss, html: "Acepto mi final... Fui superado por un verdadero Maestro de las Fracciones. Me rindo..." },
+          { speaker: "Pepe Loco", avatar: SVGS.pepeLoco, html: "🎉 ¡LO LOGRAMOS, VECINO! Salvaste todos los mundos y te convertiste en un héroe legendario de las matemáticas." }
+        ]
+      }
+    };
+
+    function startWorldStory(worldNum, type = "intro") {
+      isStoryActive = true;
+      currentWorld = worldNum;
+      dialogueSequence = STORY_DATA[worldNum][type];
+      dialogueStep = 0;
+
+      const overlay = document.getElementById('dialogueOverlay');
+      overlay.classList.remove('hidden', 'opacity-0');
+      overlay.classList.add('opacity-100');
+
+      renderDialogueStep();
+    }
+
+    function renderDialogueStep() {
+      const stepData = dialogueSequence[dialogueStep];
+      document.getElementById('dialogueAvatar').innerHTML = stepData.avatar;
+      document.getElementById('speakerName').innerText = stepData.speaker;
+      document.getElementById('dialogueText').innerHTML = stepData.html;
+
+      const btn = document.getElementById('nextDialogueBtn');
+      if (dialogueStep === dialogueSequence.length - 1) {
+        btn.innerText = "¡A BATALLAR! ⚔️";
+      } else {
+        btn.innerText = "Siguiente ➔";
+      }
+    }
+
+    function advanceDialogue() {
+      if (dialogueStep < dialogueSequence.length - 1) {
+        dialogueStep++;
+        renderDialogueStep();
+      } else {
+        const overlay = document.getElementById('dialogueOverlay');
+        overlay.classList.add('opacity-0');
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+          isStoryActive = false;
+
+          if (zombiesKilled >= TARGET_KILLS) {
+            if (currentWorld < 8) {
+              unlockedWorld = Math.max(unlockedWorld, currentWorld + 1);
+              updateWorldMenuButtons();
+              selectWorld(currentWorld + 1);
+            } else {
+              selectWorld(1);
+            }
+          } else {
+            if (currentWorld === 8) {
+              setupBossWorld();
+            }
+            generateProblem();
+            spawnZombie();
+          }
+        }, 300);
+      }
+    }
+
+    function gcd(a, b) {
+      return b === 0 ? Math.abs(a) : gcd(b, a % b);
+    }
+
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateProblem() {
+      document.getElementById('feedbackText').innerText = '';
+      let n1, d1, n2, d2, op = '+';
+
+      if (currentWorld === 1) {
+        d1 = d2 = getRandomInt(3, 8);
+        n1 = getRandomInt(1, 5);
+        n2 = getRandomInt(1, 5);
+        op = Math.random() > 0.5 ? '+' : '-';
+      } else if (currentWorld === 2) {
+        d1 = getRandomInt(2, 4);
+        d2 = d1 * getRandomInt(2, 3);
+        n1 = getRandomInt(1, 4);
+        n2 = getRandomInt(1, 4);
+        op = Math.random() > 0.5 ? '+' : '-';
+      } else if (currentWorld === 3) {
+        d1 = getRandomInt(2, 5);
+        do { d2 = getRandomInt(2, 6); } while (d1 === d2);
+        n1 = getRandomInt(1, 5);
+        n2 = getRandomInt(1, 5);
+        op = Math.random() > 0.5 ? '+' : '-';
+      } else if (currentWorld === 4) {
+        d1 = getRandomInt(4, 8);
+        d2 = getRandomInt(3, 6);
+        n1 = getRandomInt(2, 6);
+        n2 = getRandomInt(2, 6);
+        op = '+';
+      } else if (currentWorld === 5) {
+        d1 = getRandomInt(2, 6);
+        d2 = getRandomInt(2, 6);
+        n1 = getRandomInt(1, 5);
+        n2 = getRandomInt(1, 5);
+        op = '×';
+      } else if (currentWorld === 6) {
+        d1 = getRandomInt(2, 5);
+        d2 = getRandomInt(2, 5);
+        n1 = getRandomInt(1, 4);
+        n2 = getRandomInt(1, 4);
+        op = '÷';
+      } else if (currentWorld === 7) {
+        let entero = getRandomInt(1, 3);
+        d1 = getRandomInt(2, 6);
+        n1 = getRandomInt(1, d1 - 1);
+        targetNum = (entero * d1) + n1;
+        targetDen = d1;
+        renderMixedProblem(entero, n1, d1);
+        focusInputs();
+        return;
+      } else {
+        let type = getRandomInt(1, 3);
+        if (type === 1) op = '+';
+        else if (type === 2) op = '×';
+        else op = '÷';
+        d1 = getRandomInt(2, 6);
+        d2 = getRandomInt(2, 6);
+        n1 = getRandomInt(1, 5);
+        n2 = getRandomInt(1, 5);
+      }
+
+      if (op === '-' && (n1 / d1) < (n2 / d2)) {
+        let tN = n1; n1 = n2; n2 = tN;
+        let tD = d1; d1 = d2; d2 = tD;
+      }
+
+      let rawNum, rawDen;
+      if (op === '+') { rawNum = (n1 * d2 + n2 * d1); rawDen = d1 * d2; }
+      else if (op === '-') { rawNum = (n1 * d2 - n2 * d1); rawDen = d1 * d2; }
+      else if (op === '×') { rawNum = n1 * n2; rawDen = d1 * d2; }
+      else if (op === '÷') { rawNum = n1 * d2; rawDen = d1 * n2; }
+
+      let div = gcd(rawNum, rawDen);
+      targetNum = rawNum / div;
+      targetDen = rawDen / div;
+
+      renderMathProblem(n1, d1, op, n2, d2);
+      focusInputs();
+    }
+
+    function renderMathProblem(n1, d1, op, n2, d2) {
+      const box = document.getElementById('problemBox');
+      box.innerHTML = `
+        <div class="v-fraction">
+          <span class="num">${n1}</span>
+          <span class="den">${d1}</span>
+        </div>
+        <span class="text-amber-300 mx-1">${op}</span>
+        <div class="v-fraction">
+          <span class="num">${n2}</span>
+          <span class="den">${d2}</span>
+        </div>
+        <span class="text-amber-300 mx-1">=</span>
+        <div class="inline-flex flex-col gap-1 w-12 sm:w-16">
+          <input type="number" id="inputNum" class="fraction-input h-8 sm:h-10 text-sm sm:text-base" placeholder="N" onkeydown="handleEnterKey(event)">
+          <input type="number" id="inputDen" class="fraction-input h-8 sm:h-10 text-sm sm:text-base" placeholder="D" onkeydown="handleEnterKey(event)">
+        </div>
+      `;
+    }
+
+    function renderMixedProblem(entero, n, d) {
+      const box = document.getElementById('problemBox');
+      box.innerHTML = `
+        <span class="text-2xl text-yellow-300 font-bold mr-1">${entero}</span>
+        <div class="v-fraction">
+          <span class="num">${n}</span>
+          <span class="den">${d}</span>
+        </div>
+        <span class="text-amber-300 mx-2">➔ Impropia =</span>
+        <div class="inline-flex flex-col gap-1 w-12 sm:w-16">
+          <input type="number" id="inputNum" class="fraction-input h-8 sm:h-10 text-sm sm:text-base" placeholder="N" onkeydown="handleEnterKey(event)">
+          <input type="number" id="inputDen" class="fraction-input h-8 sm:h-10 text-sm sm:text-base" placeholder="D" onkeydown="handleEnterKey(event)">
+        </div>
+      `;
+    }
+
+    function handleEnterKey(e) {
+      if (e.key === 'Enter') {
+        submitAnswer();
+      }
+    }
+
+    function focusInputs() {
+      setTimeout(() => {
+        const inp = document.getElementById('inputNum');
+        if (inp && !isStoryActive) {
+          inp.focus();
+        }
+      }, 100);
+    }
+
+    function spawnZombie() {
+      if (isStoryActive) return;
+
+      document.querySelectorAll('.zombie-unit').forEach(z => z.remove());
+      currentTargetRow = Math.floor(Math.random() * 3);
+
+      let hp = 1;
+      let hatIcon = "";
+
+      if (currentWorld >= 2 && currentWorld <= 4) {
+        hp = Math.random() > 0.4 ? 2 : 1;
+        if (hp === 2) hatIcon = "🍦";
+      } else if (currentWorld >= 5 && currentWorld <= 7) {
+        hp = Math.random() > 0.5 ? 3 : 2;
+        hatIcon = hp === 3 ? "🪣" : "🍦";
+      } else if (currentWorld === 8) {
+        hp = Math.random() > 0.5 ? 4 : 3;
+        hatIcon = hp === 4 ? "👑" : "🪣";
+      }
+
+      activeZombieHP = hp;
+
+      const zombie = document.createElement('div');
+      zombie.className = 'zombie-unit absolute w-16 h-16 sm:w-20 sm:h-20 z-20 transition-all';
+      zombie.id = 'activeZombie';
+      zombie.style.right = '-80px';
+
+      zombie.innerHTML = `
+        <div class="hp-badge" id="zombieHPBadge">HP: ${activeZombieHP} ${hatIcon}</div>
+        <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+          <rect x="42" y="60" width="7" height="30" fill="#37474f"/>
+          <rect x="52" y="60" width="7" height="30" fill="#263238"/>
+          <rect x="36" y="42" width="28" height="22" fill="#455a64" rx="3"/>
+          <circle cx="50" cy="28" r="18" fill="#689f38" stroke="#2e7d32" stroke-width="2"/>
+          <circle cx="43" cy="24" r="4" fill="#fff"/><circle cx="44" cy="24" r="1.5" fill="#000"/>
+          <circle cx="57" cy="26" r="5" fill="#fff"/><circle cx="56" cy="26" r="1.5" fill="#000"/>
+        </svg>
+      `;
+
+      document.getElementById(`lane-${currentTargetRow}`).appendChild(zombie);
+      startZombieMovement();
+    }
+
+    function startZombieMovement() {
+      clearInterval(zombieInterval);
+      zombiePos = -80;
+
+      zombieInterval = setInterval(() => {
+        if (isStoryActive) return;
+
+        const lawnWidth = document.getElementById('lawnContainer').clientWidth;
+        zombiePos += 1.6;
+
+        const zElem = document.getElementById('activeZombie');
+        if (zElem) {
+          zElem.style.right = zombiePos + 'px';
+        }
+
+        if (zombiePos >= lawnWidth - 40) {
+          clearInterval(zombieInterval);
+          lives--;
+          document.getElementById('livesDisplay').innerText = lives;
+
+          const fb = document.getElementById('feedbackText');
+          fb.innerText = '⚠️ ¡Un zombi cruzó todo tu campo!';
+          fb.className = 'h-5 text-xs sm:text-sm font-bold text-center mt-2 text-red-400';
+
+          if (lives <= 0) {
+            triggerGameOver();
+          } else {
+            setTimeout(spawnZombie, 1000);
+          }
+        }
+      }, 100);
+    }
+
+    function setupBossWorld() {
+      const zombot = document.getElementById('bossZombot');
+      zombot.classList.remove('hidden');
+      zombot.innerHTML = SVGS.zombot;
+
+      clearInterval(bossAttackInterval);
+      bossAttackInterval = setInterval(() => {
+        if (isStoryActive || lives <= 0) return;
+        
+        let randomLane = Math.floor(Math.random() * 3);
+        let laser = document.getElementById(`laser-${randomLane}`);
+        laser.classList.add('animate-laser');
+        
+        let plant = document.getElementById(`plantSlot-${randomLane}`);
+        plant.style.opacity = '0.2';
+
+        setTimeout(() => {
+          laser.classList.remove('animate-laser');
+          plant.style.opacity = '1';
+        }, 1200);
+
+      }, 7000);
+    }
+
+    function triggerGameOver() {
+      clearInterval(zombieInterval);
+      clearInterval(bossAttackInterval);
+
+      const brain = document.getElementById('brainAnimation');
+      brain.classList.remove('animate-munch');
+      void brain.offsetWidth;
+      brain.classList.add('animate-munch');
+
+      const randomMsg = ENCOURAGEMENT_MESSAGES[Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.length)];
+      document.getElementById('encouragementText').innerText = randomMsg;
+      
+      document.getElementById('gameOverOverlay').classList.remove('hidden');
+    }
+
+    function retryLevel() {
+      document.getElementById('gameOverOverlay').classList.add('hidden');
+      resetGameProgress();
+    }
+
+    function submitAnswer() {
+      if (isStoryActive || isFiring) return;
+
+      const numInput = document.getElementById('inputNum');
+      const denInput = document.getElementById('inputDen');
+
+      if (!numInput || !denInput) return;
+
+      const uNum = parseInt(numInput.value);
+      const uDen = parseInt(denInput.value);
+      const feedback = document.getElementById('feedbackText');
+
+      if (isNaN(uNum) || isNaN(uDen)) {
+        feedback.innerText = '⚠️ Completa el numerador y denominador';
+        feedback.className = 'h-5 text-xs sm:text-sm font-bold text-center mt-2 text-yellow-300';
+        return;
+      }
+
+      if (uNum * targetDen === uDen * targetNum) {
+        isFiring = true;
+        feedback.innerText = '✨ ¡EXCELENTE! ¡Ataque cargado!';
+        feedback.className = 'h-5 text-xs sm:text-sm font-bold text-center mt-2 text-green-400';
+
+        const pea = document.getElementById(`pea-${currentTargetRow}`);
+        const lawnWidth = document.getElementById('lawnContainer').clientWidth;
+        let peaLeft = 70;
+        pea.style.display = 'block';
+        pea.style.left = peaLeft + 'px';
+
+        let peaAnim = setInterval(() => {
+          peaLeft += 20;
+          pea.style.left = peaLeft + 'px';
+
+          if (peaLeft >= (lawnWidth - zombiePos - 80)) {
+            clearInterval(peaAnim);
+            pea.style.display = 'none';
+
+            activeZombieHP--;
+            const hpBadge = document.getElementById('zombieHPBadge');
+            if (hpBadge) hpBadge.innerText = `HP: ${activeZombieHP}`;
+
+            if (activeZombieHP <= 0) {
+              clearInterval(zombieInterval);
+              zombiesKilled++;
+              updateProgressUI();
+
+              feedback.innerText = '💥 ¡Zombi derrotado!';
+              isFiring = false;
+
+              if (zombiesKilled >= TARGET_KILLS) {
+                setTimeout(() => {
+                  startWorldStory(currentWorld, "outro");
+                }, 800);
+              } else {
+                setTimeout(() => {
+                  generateProblem();
+                  spawnZombie();
+                }, 800);
+              }
+            } else {
+              feedback.innerText = `🛡️ ¡Impacto! HP restante: ${activeZombieHP}`;
+              isFiring = false;
+              generateProblem();
+            }
+          }
+        }, 20);
+
+      } else {
+        feedback.innerText = '❌ Respuesta incorrecta. ¡Revisa tu cálculo!';
+        feedback.className = 'h-5 text-xs sm:text-sm font-bold text-center mt-2 text-red-400';
+        document.getElementById('problemBox').classList.add('shake-err');
+        setTimeout(() => document.getElementById('problemBox').classList.remove('shake-err'), 400);
+      }
+    }
+
+    function updateProgressUI() {
+      document.getElementById('zombieDefeatedText').innerText = `${zombiesKilled} / ${TARGET_KILLS} Zombis`;
+      const pct = (zombiesKilled / TARGET_KILLS) * 100;
+      document.getElementById('progressBar').style.width = pct + '%';
+    }
+
+    function renderPlants() {
+      for (let i = 0; i < 3; i++) {
+        const slot = document.getElementById(`plantSlot-${i}`);
+        slot.innerHTML = SVGS.plants[currentWorld - 1];
+      }
+    }
+
+    function selectWorld(worldNum) {
+      if (worldNum > unlockedWorld) return;
+
+      currentWorld = worldNum;
+      zombiesKilled = 0;
+      lives = 3;
+
+      document.getElementById('livesDisplay').innerText = lives;
+      updateProgressUI();
+
+      const titles = [
+        "Mundo 1: El Jardín", "Mundo 2: La Piscina", "Mundo 3: El Tejado", "Mundo 4: Espacio Exterior",
+        "Mundo 5: El Desierto", "Mundo 6: Casa de Pepe Loco", "Mundo 7: Jardín Lluvioso", "Mundo 8: Guarida Zomboss"
+      ];
+      document.getElementById('worldTitle').innerText = titles[worldNum - 1];
+
+      const lawn = document.getElementById('lawnContainer');
+      lawn.className = `w-full h-full border-b-4 flex flex-col relative overflow-hidden transition-all duration-500 bg-world-${worldNum}`;
+
+      const rain = document.getElementById('rainOverlay');
+      if (worldNum === 7) rain.classList.remove('hidden');
+      else rain.classList.add('hidden');
+
+      const zombot = document.getElementById('bossZombot');
+      if (worldNum === 8) zombot.classList.remove('hidden');
+      else zombot.classList.add('hidden');
+
+      renderPlants();
+      toggleWorldMenu(false);
+      startWorldStory(worldNum, "intro");
+    }
+
+    function updateWorldMenuButtons() {
+      for (let i = 1; i <= 8; i++) {
+        const btn = document.getElementById(`btnWorld-${i}`);
+        if (i <= unlockedWorld) {
+          btn.classList.remove('opacity-60', 'cursor-not-allowed', 'border-gray-600');
+          btn.classList.add('border-green-500', 'hover:bg-[#4a3027]');
+        }
+      }
+    }
+
+    function toggleWorldMenu(forceState) {
+      const menu = document.getElementById('worldMenuOverlay');
+      if (typeof forceState === 'boolean') {
+        menu.classList.toggle('hidden', !forceState);
+      } else {
+        menu.classList.toggle('hidden');
+      }
+    }
+
+    function resetGameProgress() {
+      lives = 3;
+      zombiesKilled = 0;
+      updateProgressUI();
+      document.getElementById('livesDisplay').innerText = lives;
+      generateProblem();
+      spawnZombie();
+    }
+
+    window.onload = function() {
+      renderPlants();
+      updateWorldMenuButtons();
+      startWorldStory(1, "intro");
+    };
+  </script>
+</body>
+</html>
